@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import eu.luminis.kennissessie.cqrswebshop.api.command.CreateProductCommand;
 import eu.luminis.kennissessie.cqrswebshop.api.command.ReserveStockCommand;
 import eu.luminis.kennissessie.cqrswebshop.api.command.UndoStockReservationCommand;
+import eu.luminis.kennissessie.cqrswebshop.api.event.ProductFreedEvent;
 import eu.luminis.kennissessie.cqrswebshop.api.event.ProductReservedEvent;
 
 @Aggregate
@@ -37,17 +38,22 @@ public class Product {
 
     @CommandHandler
     public Product(CreateProductCommand createProductCommand){
-        // TODO: Implement
+        id = createProductCommand.getProductId();
+        amount = createProductCommand.getInitialAmountInStock();
     }
 
     @CommandHandler
     public void handle(ReserveStockCommand reserveStockCommand){
-        // TODO: Implement
+        if(amount - reserveStockCommand.getAmount() < 0) {
+            throw new IllegalStateException("Not enough stock available");
+        }
+        amount -= reserveStockCommand.getAmount();
+        eventBus.publish(GenericEventMessage.asEventMessage(new ProductReservedEvent(id)));
     }
 
     @CommandHandler
     public void handle(UndoStockReservationCommand undoStockReservationCommand){
-        // TODO: Implement
-
+        amount += undoStockReservationCommand.getAmount();
+        eventBus.publish(GenericEventMessage.asEventMessage(new ProductFreedEvent(id)));
     }
 }
